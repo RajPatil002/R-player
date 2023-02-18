@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io' as io;
 import 'package:file/memory.dart';
@@ -16,8 +17,10 @@ class Player extends StatefulWidget {
 
 class _PlayerState extends State<Player> {
   late VideoPlayerController _controller;
-  double _playbacktime = 0, _volumecontroller = 0;
-
+  double _playbacktime = 0;
+  final List _volumerange = List.generate(11, (index) => (index) / 10);
+  int _lastposition = 0, _volumecontroller = 0;
+  late Size dragdistance;
 
   @override
   void initState() {
@@ -27,10 +30,12 @@ class _PlayerState extends State<Player> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       FileSystem fs = MemoryFileSystem(style: FileSystemStyle.posix);
       // log((await io.File("storage/emulated/0/download/govinda.mkv").exists()).toString());
-      _volumecontroller = await VolumeController().getVolume();
+      dragdistance = MediaQuery.of(context).size;
+      _volumecontroller = ((await VolumeController().getVolume()) * 10).toInt();
+      // log(dragdistance.toString());
       File video = fs.file(fs.path.absolute("storage/emulated/0/download/govinda.mkv"));
       _controller = VideoPlayerController.file(video)
-        ..setVolume(_volumecontroller)
+        ..setVolume(_volumerange[_volumecontroller])
         ..addListener(() {
           setState(() {
             // _playbacktime = _controller.value.position.inSeconds.toDouble();
@@ -41,15 +46,14 @@ class _PlayerState extends State<Player> {
           // await _controller.play();
           setState(() {});
         });
-      // log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$_volumecontroller");
     });
     VolumeController().listener((vol) async {
       await _controller.setVolume(vol);
-      _volumecontroller = vol;
-      // setState(() {});
-      // log("wwwwwwwwwwwwwwwwwww${_controller.value.volume}");
+      _volumecontroller = (vol * 10).toInt();
+      setState(() {});
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -86,25 +90,23 @@ class _PlayerState extends State<Player> {
                     child: Container(
                       color: Colors.red,
                     ),
-                    onVerticalDragUpdate:(update) {
-                      log("${update.delta.dx}         ${update.delta.dy}");
-                      if (update.delta.dy.isNegative) {
-                        if ((_volumecontroller - (update.delta.dy.toDouble() / 100)) <= 1) {
-                          _volumecontroller -= (update.delta.dy.toDouble() / 100);
+                    onVerticalDragUpdate: (update) {
+                      int diff = (_lastposition - update.localPosition.dy.floor());
+                      if (diff.abs() > dragdistance.height / 20) {
+                        _lastposition = update.localPosition.dy.floor();
+                        if (diff.isNegative) {
+                          if (_volumecontroller > 0) {
+                            _volumecontroller -= 1;
+                          }
                         } else {
-                          _volumecontroller = 1;
+                          if (_volumecontroller < 10) {
+                            _volumecontroller += 1;
+                          }
                         }
-                      } else {
-                        if ((_volumecontroller - (update.delta.dy.toDouble() / 100)) >= 0) {
-                          _volumecontroller -= (update.delta.dy.toDouble() / 100);
-                        } else {
-                          _volumecontroller = 0;
-                        }
+                        setState(() {
+                          VolumeController().setVolume(_volumerange[_volumecontroller], showSystemUI: true);
+                        });
                       }
-                      setState(() {
-                        VolumeController().setVolume(_volumecontroller, showSystemUI: true);
-                      });
-                      log("$_volumecontroller");
                     },
                     onDoubleTap: () {
                       setState(() {
@@ -118,8 +120,8 @@ class _PlayerState extends State<Player> {
                   flex: 3,
                   child: GestureDetector(
                     child: Container(
-                      // color: Colors.green,
-                    ),
+                        // color: Colors.green,
+                        ),
                     onHorizontalDragUpdate: (update) {
                       log((update.delta.dx / 10).toString());
                       setState(() {
@@ -132,8 +134,8 @@ class _PlayerState extends State<Player> {
                 Expanded(
                   child: GestureDetector(
                     child: Container(
-                      // color: Colors.blue,
-                    ),
+                        // color: Colors.blue,
+                        ),
                     onDoubleTap: () {
                       setState(() {
                         _playbacktime = _playbacktime + 10;
@@ -175,7 +177,7 @@ class _PlayerState extends State<Player> {
                   height: 50,
                 ),
                 Text("Current time : ${_controller.value.position}"),
-                Text("Current volume : $_volumecontroller"),
+                Text("Current volume : ${_volumerange[_volumecontroller]}"),
               ],
             ),
           ],
@@ -186,8 +188,10 @@ class _PlayerState extends State<Player> {
   void dispose() {
     super.dispose();
     _controller.dispose();
-    SystemChrome.setPreferredOrientations(
-        [DeviceOrientation.portraitUp,DeviceOrientation.landscapeRight, DeviceOrientation.landscapeRight,]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
-
 }
