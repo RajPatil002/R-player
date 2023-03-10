@@ -6,6 +6,8 @@ import 'package:file/file.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:screen/screen.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'package:video_player/video_player.dart';
 import 'package:volume_controller/volume_controller.dart';
 
@@ -28,11 +30,13 @@ class _PlayerState extends State<Player> {
   int _lastpositionvolume = 0, _volumecontroller = 0, _lastpositionbrightness = 0,_speed = 3;
   late int _beforemute;
   late Size size;
+  ScreenBrightness bright =  ScreenBrightness();
   bool islocked = false;
 
   @override
   void initState() {
     super.initState();
+    Screen.keepOn(true);
     String movie = "storage/emulated/0/idmp/sonic.mp4";
     // SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight,DeviceOrientation.landscapeLeft,]);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -43,6 +47,7 @@ class _PlayerState extends State<Player> {
       _volumecontroller = _volumerange.indexOf((await VolumeController().getVolume()));
       // log(_volumecontroller.toString());
       // srt = await fs.file("/storage/0/emulated/idmp/sonic.srt").readAsString();
+      _beforemute = _volumecontroller;
       File video = fs.file(fs.path.absolute(movie));
       _controller = VideoPlayerController.file(video)
         ..setVolume(_volumerange[_volumecontroller])
@@ -121,6 +126,39 @@ class _PlayerState extends State<Player> {
               ),
             ),
 
+            // brightness indicator
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(border: Border.all(color: Colors.green)),
+                  // color: Colors.yellow,
+                  width: size.width / 12,
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: ListView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      reverse: true,
+                      itemCount: _volumerange.length - 1,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.all(0.1),
+                          child: Container(
+                            height: 10,
+                            color: index >= _volumecontroller ? Colors.green[50] : greenaccent,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             // Gestures
             _controller.value.isInitialized
                 ? Row(
@@ -129,6 +167,7 @@ class _PlayerState extends State<Player> {
                         child: GestureDetector(
                           onVerticalDragUpdate: (update) {
                             // todo the brightness sliding gesture
+                            print(bright.current);
                           },
                           onDoubleTap: () {
                             setState(() {
@@ -405,8 +444,7 @@ class _PlayerState extends State<Player> {
     _controller.dispose();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
     ]);
+    Screen.keepOn(false);
   }
 }
