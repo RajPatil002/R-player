@@ -3,10 +3,10 @@ import 'dart:developer';
 import 'dart:io' as io;
 import 'package:file/memory.dart';
 import 'package:file/file.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:screen/screen.dart';
+import 'package:r_player/module/volume.dart';
+// import 'package:screen/screen.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:video_player/video_player.dart';
 import 'package:volume_controller/volume_controller.dart';
@@ -26,18 +26,17 @@ class _PlayerState extends State<Player> {
   late String srt;
   Color greenaccent = const Color(0xff78FF9E);
   final List _volumerange = List.generate(16, (index) => double.parse(((index) / 15).toStringAsFixed(4)));
-  final List _speedrange = List.generate(8, (index) => (index+1) * 0.25);
-  int _lastpositionvolume = 0, _volumecontroller = 0, _lastpositionbrightness = 0,_speed = 3;
+  final List _speedrange = List.generate(8, (index) => (index + 1) * 0.25);
+  int _lastpositionvolume = 0, _volumecontroller = 0, _lastpositionbrightness = 0, _speed = 3;
   late int _beforemute;
   late Size size;
-  ScreenBrightness bright =  ScreenBrightness();
+  ScreenBrightness bright = ScreenBrightness();
   bool islocked = false;
 
   @override
   void initState() {
-    super.initState();
-    Screen.keepOn(true);
-    String movie = "storage/emulated/0/idmp/sonic.mp4";
+    // Screen.keepOn(true);
+    String movie = "storage/emulated/0/Download/video.mp4";
     // SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight,DeviceOrientation.landscapeLeft,]);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -69,6 +68,7 @@ class _PlayerState extends State<Player> {
       await _controller.setVolume(_volumerange[_volumecontroller]);
       setState(() {});
     });
+    super.initState();
   }
 
   @override
@@ -87,11 +87,9 @@ class _PlayerState extends State<Player> {
           children: [
             // _controller.value.isInitialized
             //     ?
-            Center(child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller)))
-            // : const Center(
-            //     child: CircularProgressIndicator(),
-            //   )
-            ,
+            _controller.value.isInitialized
+                ? Center(child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller)))
+                : Center(child: CircularProgressIndicator(color: greenaccent)),
 
             // volume indicator
             Align(
@@ -167,34 +165,9 @@ class _PlayerState extends State<Player> {
                         child: GestureDetector(
                           onVerticalDragUpdate: (update) {
                             // todo the brightness sliding gesture
-                            print(bright.current);
-                          },
-                          onDoubleTap: () {
-                            setState(() {
-                              _playbacktime = _playbacktime + 10;
-                              _controller.seekTo(Duration(seconds: _playbacktime.toInt() + 10));
-                            });
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: GestureDetector(
-                          onHorizontalDragUpdate: (update) {
-                            // log((update.delta.dx / 10).toString());
-                            setState(() {
-                              _playbacktime = _playbacktime + (update.delta.dx / 10);
-                              _controller.seekTo(Duration(seconds: (_playbacktime).toInt()));
-                            });
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onVerticalDragUpdate: (update) {
-                            int diff = (_lastpositionvolume - update.localPosition.dy.floor());
+                            int diff = (_lastpositionbrightness - update.localPosition.dy.floor());
                             if (diff.abs() > size.height / 50) {
-                              _lastpositionvolume = update.localPosition.dy.floor();
+                              _lastpositionbrightness = update.localPosition.dy.floor();
                               if (diff.isNegative) {
                                 if (_volumecontroller > 0) {
                                   _volumecontroller -= 1;
@@ -210,15 +183,34 @@ class _PlayerState extends State<Player> {
                                 // log(_volumerange[_volumecontroller].toString());
                               });
                             }
+                            print(bright.current);
                           },
                           onDoubleTap: () {
                             setState(() {
-                              _playbacktime = _playbacktime - 10;
-                              _controller.seekTo(Duration(seconds: _playbacktime.toInt() - 10));
+                              _playbacktime = _playbacktime + 10;
+                              _controller.seekTo(Duration(seconds: _playbacktime.toInt() + 10));
+                            });
+                          },
+                          onHorizontalDragUpdate: (update) {
+                            // todo playback control
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: GestureDetector(
+                          onHorizontalDragUpdate: (update) {
+                            // log((update.delta.dx / 10).toString());
+                            setState(() {
+                              _playbacktime = _playbacktime + (update.delta.dx / 10);
+                              _controller.seekTo(Duration(seconds: (_playbacktime).toInt()));
                             });
                           },
                         ),
                       ),
+                      // Expanded(
+                      //   child: VolumeControlSeekRight(videoController: _controller),
+                      // ),
                     ],
                   )
                 : Container(),
@@ -252,19 +244,23 @@ class _PlayerState extends State<Player> {
                           children: [
                             Expanded(
                               child: TextButton.icon(
-                                  onPressed: () {
-                                    ++_speed;
-                                    if(_speed==8) {
-                                      _speed=0;
-                                    }
-                                    setState(() {
-                                      _controller.setPlaybackSpeed(_speedrange[_speed]);
-                                    });
-                                  },
-                                  icon: Icon(
-                                    false ? PlayerIcon.lock : PlayerIcon.speed,
-                                    color: greenaccent,
-                                  ), label: Text(_speedrange[_speed].toString(),style: TextStyle(color: greenaccent),),
+                                onPressed: () {
+                                  ++_speed;
+                                  if (_speed == 8) {
+                                    _speed = 0;
+                                  }
+                                  setState(() {
+                                    _controller.setPlaybackSpeed(_speedrange[_speed]);
+                                  });
+                                },
+                                icon: Icon(
+                                  false ? PlayerIcon.lock : PlayerIcon.speed,
+                                  color: greenaccent,
+                                ),
+                                label: Text(
+                                  _speedrange[_speed].toString(),
+                                  style: TextStyle(color: greenaccent),
+                                ),
                               ),
                             ),
                             Expanded(
@@ -341,6 +337,8 @@ class _PlayerState extends State<Player> {
                       //             showSystemUI: false);
                       //       });
                       //     }),
+
+                      // buttons
                       Padding(
                         padding: const EdgeInsets.all(20),
                         child: Row(children: <Widget>[
@@ -393,7 +391,7 @@ class _PlayerState extends State<Player> {
                           Expanded(
                             child: IconButton(
                                 onPressed: () {
-                                  if(_volumecontroller != 0){
+                                  if (_volumecontroller != 0) {
                                     _beforemute = _volumecontroller;
                                     _volumecontroller = 0;
                                     setState(() {
@@ -401,7 +399,7 @@ class _PlayerState extends State<Player> {
                                       VolumeController().setVolume(_volumerange[_volumecontroller], showSystemUI: false);
                                       // log(_volumerange[_volumecontroller].toString());
                                     });
-                                  }else if(_volumecontroller == 0){
+                                  } else if (_volumecontroller == 0) {
                                     _volumecontroller = _beforemute;
                                     setState(() {
                                       _controller.setVolume(_volumerange[_volumecontroller]);
@@ -412,7 +410,7 @@ class _PlayerState extends State<Player> {
                                   print("mute${_volumerange[_volumecontroller]}");
                                 },
                                 icon: Icon(
-                                  _volumecontroller == 0? PlayerIcon.mute : PlayerIcon.unmute,
+                                  _volumecontroller == 0 ? PlayerIcon.mute : PlayerIcon.unmute,
                                   color: greenaccent,
                                 )),
                           ),
@@ -445,6 +443,6 @@ class _PlayerState extends State<Player> {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
-    Screen.keepOn(false);
+    // Screen.keepOn(false);
   }
 }
