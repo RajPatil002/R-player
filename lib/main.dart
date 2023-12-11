@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:r_player/module/brightness.dart';
 import 'package:r_player/module/volume.dart';
-import 'package:r_player/screens/RightControlsScreen.dart';
+import 'package:r_player/screens/LeftScreenControls.dart';
+import 'package:r_player/screens/RightScreenControls.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 void main() {
@@ -17,6 +19,8 @@ class _JustState extends State<Just> {
   final b = ScreenBrightness();
   int br = 5;
   late Size size;
+  final Volume volume = Volume();
+  final Brightness brightness = Brightness();
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
@@ -28,20 +32,26 @@ class _JustState extends State<Just> {
 
   @override
   Widget build(BuildContext context) {
-    final Volume volume = Volume();
     return Scaffold(
       body: Stack(
         children: [
           Row(
             children: [
               Expanded(
-                  flex: 4,
+                  flex: 1,
                   child: Container(
-                    color: Colors.red,
+                    color: Colors.green,
+                    child: LeftScreenControls(brightness: Brightness()),
                   )),
               Expanded(
+                flex: 3,
+                child: Container(
+                  color: Colors.red,
+                ),
+              ),
+              Expanded(
                 flex: 1,
-                child: RightControlsScreen(
+                child: RightScreenControls(
                   volume: volume,
                 ),
               ),

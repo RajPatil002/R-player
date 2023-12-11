@@ -27,6 +27,6 @@ class Volume {
     volume = await volumecontroller.getVolume();
     index = volumerange.indexOf(volume);
     print("vol $volumerange  $volume   $index");
-    setSystemVolume(index);
+    // setSystemVolume(index);
   }
 }
